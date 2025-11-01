@@ -27,12 +27,12 @@ resource "azurerm_service_plan" "plan" {
   name                = "my-student-plan"
   location            = azurerm_resource_group.rg.location
   resource_group_name = azurerm_resource_group.rg.name
-  
-  # "F1" là gói Free (Miễn phí), rất hợp với tài khoản Student
-  sku {
-    tier = "Free"
-    size = "F1"
-  }
+
+  # Cần chỉ định OS là Linux (vì Web App của bạn dùng Linux)
+  os_type             = "Linux"
+
+  # Cú pháp đúng cho gói Free "F1"
+  sku_name            = "F1"
 }
 
 # 3. Tạo Web App (ngôi nhà)
