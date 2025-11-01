@@ -19,7 +19,7 @@ provider "azurerm" {
 # 1. Tạo Resource Group (cái thùng chứa mọi thứ)
 resource "azurerm_resource_group" "rg" {
   name     = "MyWebApp-RG-Student" 
-  location = "norwayeast"    # <-- Đã sửa thành "norwayeast"
+  location = "italynorth"    # <-- Đã sửa thành "italynorth"
 }
 
 # 2. Tạo App Service Plan (gói "F1" là miễn phí)
