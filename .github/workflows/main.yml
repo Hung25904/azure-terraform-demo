@@ -1,0 +1,91 @@
+name: 'Terraform CI/CD'
+
+# 1. KÍCH HOẠT (Trigger)
+# Chạy pipeline này mỗi khi bạn "git push" code lên nhánh "main"
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Cho phép chạy thủ công
+
+jobs:
+  #--- GIAI ĐOẠN "KIỂM TRA" & "LÊN KẾ HOẠCH" ---
+  terraform-plan:
+    name: 'Terraform Plan'
+    runs-on: ubuntu-latest
+
+    steps:
+      # Bước 1: Lấy code từ kho GitHub về
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Bước 2: Đăng nhập vào Azure bằng "chìa khoá" bí mật
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # Bước 3: Cài đặt Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # Bước 4: Chạy "terraform init"
+      - name: Terraform Init
+        run: terraform init
+
+      # Bước 5: Chạy "terraform validate" (kiểm tra lỗi cú pháp)
+      - name: Terraform Validate
+        run: terraform validate
+
+      # Bước 6: Chạy "terraform plan" (tạo tóm tắt thay đổi)
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+
+      # Bước 7: Lưu lại file "tfplan" để giai đoạn sau dùng
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: tfplan
+
+  #--- GIAI ĐOẠN "DUYỆT" & "TRIỂN KHAI" ---
+  terraform-apply:
+    name: 'Terraform Apply'
+    runs-on: ubuntu-latest
+    
+    # Giai đoạn này CHỈ CHẠY SAU KHI "terraform-plan" chạy xong
+    needs: terraform-plan 
+    
+    # THÊM BƯỚC "DUYỆT THỦ CÔNG" (Chốt an toàn)
+    # Bạn cần tạo Environment "production" trong Settings của kho
+    environment: 
+      name: production 
+      
+    steps:
+      # Bước 1: Đăng nhập Azure (làm lại, vì đây là job mới)
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # Bước 2: Lấy code về
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Bước 3: Cài đặt Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # Bước 4: Tải về file "tfplan" từ giai đoạn trước
+      - name: Download plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+
+      # Bước 5: Chạy "terraform init" (luôn cần)
+      - name: Terraform Init
+        run: terraform init
+
+      # Bước 6: Chạy "terraform apply" với file plan đã được duyệt
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
